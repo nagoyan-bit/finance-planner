@@ -1,0 +1,20 @@
+{
+  "name": "家計・返済プランナー",
+  "short_name": "返済プランナー",
+  "description": "家計・返済・利息と臨時収入の配分を端末内で管理するPWA",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f1",
+  "theme_color": "#0f6e56",
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ]
+}
