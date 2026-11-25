@@ -63,3 +63,23 @@ test('shift overlap detection and batch skip',async({page})=>{
  });
  expect(result).toEqual({sameDay:true,overnight:true,adjacent:false,separate:false,daily:false});
 });
+
+
+test('shift templates preserve settings on mobile and old shift wage is a snapshot',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8000/index.html');
+ await page.evaluate(()=>{S.shiftJobs=[{id:'job1',name:'テスト勤務先',mode:'hourly',rate:1200,transport:500,close:31,pay:25,offset:1,nightMultiplier:1.25}];save()});
+ await page.reload();await page.getByRole('navigation').getByRole('button',{name:'収入配分'}).click();
+ await page.locator('#shiftcalendar .calday').nth(0).click();
+ await page.locator('#bsstart').fill('17:30');await page.locator('#bsend').fill('22:30');await page.locator('#bsrest').fill('30');
+ await page.getByText('勤務パターンを保存・呼び出し',{exact:true}).click();
+ await page.locator('#bstname').fill('平日夕勤');await page.getByRole('button',{name:'現在の勤務条件を保存'}).click();
+ expect(await page.evaluate(()=>S.shiftJobs[0].shiftTemplates.map(x=>({name:x.name,start:x.start,end:x.end,rest:x.rest,rate:x.rate})))).toEqual([{name:'平日夕勤',start:'17:30',end:'22:30',rest:30,rate:1200}]);
+ await page.locator('#shiftcalendar .calday').nth(1).click();
+ await page.getByText('勤務パターンを保存・呼び出し',{exact:true}).click();
+ await page.locator('#bstemplate').selectOption({label:'平日夕勤'});await page.getByRole('button',{name:'呼び出し',exact:true}).click();
+ expect(await page.evaluate(()=>({start:document.querySelector('#bsstart').value,end:document.querySelector('#bsend').value,rest:document.querySelector('#bsrest').value,rate:boardDraft.rate}))).toEqual({start:'17:30',end:'22:30',rest:'30',rate:1200});
+ const snapshot=await page.evaluate(()=>{const j=S.shiftJobs[0],s={id:'old',job:j.id,date:'2026-10-01',start:'17:00',end:'21:00',rest:0,minutes:240,mode:'hourly',rate:1000,transport:0,extra:0,nightMultiplier:1};S.shifts.push(s);const before=shiftEstimate(s);updateShiftJob(j,{rate:1500,transport:1000});return {savedRate:s.rate,payBefore:before,payAfter:shiftEstimate(s),jobRate:j.rate}});
+ expect(snapshot).toEqual({savedRate:1000,payBefore:4000,payAfter:4000,jobRate:1500});expect(errors).toEqual([]);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);await page.close();
+});
