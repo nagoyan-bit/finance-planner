@@ -27,3 +27,24 @@ for (const viewport of [{width:1280,height:800},{width:390,height:844}]) {
   await page.close();
  });
 }
+
+for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
+ test('v5.9 account and forecast regression '+viewport.width,async({browser})=>{
+  const page=await browser.newPage({viewport});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://127.0.0.1:8000/index.html');
+  await page.evaluate(()=>{const s=blank();s.accts=[{id:'a',name:'給与',purpose:'給与受取',bal:70000},{id:'b',name:'返済',purpose:'返済',bal:30000},{id:'e',name:'貯金',emg:'1',bal:5000}];s.cash=100000;s.emerg=5000;s.debts=[{id:'d',name:'借入',bal:20000,bal0:20000,min:2000,rate:0,acct:'b'}];s.bud.total=20000;localStorage.setItem('dp',JSON.stringify(s))});
+  await page.reload();
+  await page.getByRole('navigation').getByRole('button',{name:'口座',exact:true}).click();
+  await page.locator('#xf').selectOption('a');await page.locator('#xt').selectOption('b');await page.locator('#xa').fill('10000');await page.getByRole('button',{name:'振替',exact:true}).click();
+  expect(await page.evaluate(()=>[S.cash,S.emerg,S.accts[0].bal,S.accts[1].bal])).toEqual([100000,5000,60000,40000]);
+  await page.getByRole('navigation').getByRole('button',{name:'借金'}).click();
+  await page.locator('#ra').fill('3000');await page.locator('#ri').fill('100');await page.locator('.formmain').getByRole('button',{name:'実績登録',exact:true}).click();
+  expect(await page.evaluate(()=>[S.cash,S.debts[0].bal,S.accts[1].bal])).toEqual([97000,17100,37000]);
+  page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'↶ 元に戻す'}).click();
+  expect(await page.evaluate(()=>[S.cash,S.debts[0].bal,S.accts[1].bal])).toEqual([100000,20000,40000]);
+  await page.getByRole('navigation').getByRole('button',{name:'ホーム'}).click();
+  expect(await page.evaluate(()=>{const raw=JSON.stringify(S);dailyForecast(90);sim(strat);transferAdvice(30);return raw===JSON.stringify(S)})).toBe(true);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+  await page.reload();expect(await page.evaluate(()=>S.cash)).toBe(100000);expect(errors).toEqual([]);await page.close();
+ });
+}
