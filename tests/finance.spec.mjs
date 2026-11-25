@@ -48,3 +48,18 @@ for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
   await page.reload();expect(await page.evaluate(()=>S.cash)).toBe(100000);expect(errors).toEqual([]);await page.close();
  });
 }
+
+
+test('shift overlap detection and batch skip',async({page})=>{
+ await page.goto('http://127.0.0.1:8000/index.html');
+ const result=await page.evaluate(()=>{
+  const shift=(date,start,end,mode='hourly')=>({date,start,end,mode});
+  const sameDay=shiftOverlaps(shift('2026-11-25','17:00','22:00'),[shift('2026-11-25','21:00','23:00')]);
+  const overnight=shiftOverlaps(shift('2026-11-25','23:00','02:00'),[shift('2026-11-26','01:00','04:00')]);
+  const adjacent=shiftOverlaps(shift('2026-11-25','17:00','22:00'),[shift('2026-11-25','22:00','23:00')]);
+  const separate=shiftOverlaps(shift('2026-11-25','17:00','22:00'),[shift('2026-11-26','17:00','22:00')]);
+  const daily=shiftOverlaps(shift('2026-11-25','','','daily'),[shift('2026-11-25','17:00','22:00')]);
+  return {sameDay,overnight,adjacent,separate,daily};
+ });
+ expect(result).toEqual({sameDay:true,overnight:true,adjacent:false,separate:false,daily:false});
+});
