@@ -72,11 +72,12 @@ test('shift templates preserve settings on mobile and old shift wage is a snapsh
  await page.reload();await page.getByRole('navigation').getByRole('button',{name:'収入配分'}).click();
  await page.locator('#shiftcalendar .calday').nth(0).click();
  await page.locator('#bsstart').fill('17:30');await page.locator('#bsend').fill('22:30');await page.locator('#bsrest').fill('30');
- await page.getByText('勤務パターンを保存・呼び出し',{exact:true}).click();
+ const templateFold=()=>page.locator('#boardeditor details').filter({hasText:'勤務パターンを保存・呼び出し'});const openTemplates=async()=>{if(!await templateFold().evaluate(el=>el.open))await templateFold().locator('summary').click()};
+ await openTemplates();
  await page.locator('#bstname').fill('平日夕勤');await page.getByRole('button',{name:'現在の勤務条件を保存'}).click();
  expect(await page.evaluate(()=>S.shiftJobs[0].shiftTemplates.map(x=>({name:x.name,start:x.start,end:x.end,rest:x.rest,rate:x.rate})))).toEqual([{name:'平日夕勤',start:'17:30',end:'22:30',rest:30,rate:1200}]);
  await page.locator('#shiftcalendar .calday').nth(1).click();
- await page.getByText('勤務パターンを保存・呼び出し',{exact:true}).click();
+ await openTemplates();
  await page.locator('#bstemplate').selectOption({label:'平日夕勤'});await page.getByRole('button',{name:'呼び出し',exact:true}).click();
  expect(await page.evaluate(()=>({start:document.querySelector('#bsstart').value,end:document.querySelector('#bsend').value,rest:document.querySelector('#bsrest').value,rate:boardDraft.rate}))).toEqual({start:'17:30',end:'22:30',rest:'30',rate:1200});
  const snapshot=await page.evaluate(()=>{const j=S.shiftJobs[0],s={id:'old',job:j.id,date:'2026-10-01',start:'17:00',end:'21:00',rest:0,minutes:240,mode:'hourly',rate:1000,transport:0,extra:0,nightMultiplier:1};S.shifts.push(s);const before=shiftEstimate(s);updateShiftJob(j,{rate:1500,transport:1000});return {savedRate:s.rate,payBefore:before,payAfter:shiftEstimate(s),jobRate:j.rate}});
