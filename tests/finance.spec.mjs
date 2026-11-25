@@ -88,3 +88,12 @@ test('shift templates preserve settings on mobile and old shift wage is a snapsh
  expect(snapshot).toEqual({savedRate:1000,payBefore:4000,payAfter:4000,jobRate:1500});expect(errors).toEqual([]);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);await page.close();
 });
+
+
+test('purpose savings stay protected from allocation and forecasts',async({page})=>{
+ await page.goto('http://127.0.0.1:8000/index.html');
+ await page.evaluate(()=>{const s=blank();s.accts=[{id:'salary',name:'給与',purpose:'給与受取',bal:100000},{id:'goal',name:'旅行積立',purpose:'目的別貯金',bal:50000},{id:'emg',name:'緊急貯金',emg:'1',bal:20000}];s.moneyGoals=[{id:'g1',name:'旅行',target:60000,due:'2027-06-30',acct:'goal'}];s.debts=[{id:'d1',name:'借入',bal:150000,bal0:150000,min:0,rate:0}];s.cfg.living=0;s.cfg.free=0;s.cfg.emgTarget=0;s.cfg.fam=0;s.bud.total=0;s.plan={};s.inc=[];localStorage.setItem('dp',JSON.stringify(s))});
+ await page.reload();
+ const result=await page.evaluate(()=>{const before=S.accts.map(a=>a.bal),a=alloc(150000,'prio','test-income');return{cash:S.cash,emergency:S.emerg,protected:protectedGoalFunds(),usable:usableCash(),forecast:dailyForecast(0).end,simPool:sim('prio').pool,planned:a.items.reduce((n,x)=>n+x.amt,0),accountsBefore:before,accountsAfter:S.accts.map(x=>x.bal)}});
+ expect(result.protected).toBe(50000);expect(result.usable).toBe(100000);expect(result.forecast).toBe(100000);expect(result.simPool).toBe(100000);expect(result.planned).toBeLessThanOrEqual(100000);expect(result.accountsAfter).toEqual(result.accountsBefore);
+});
