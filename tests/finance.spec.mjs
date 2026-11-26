@@ -116,3 +116,11 @@ test('v6.5.2 repeat entry fills but never registers',async({page})=>{
  await expect(page.locator('#ij')).toHaveValue('店舗');
  expect(await page.evaluate(()=>[S.cash,S.inc.length])).toEqual([50000,1]);
 });
+
+test('v6.5.3 allocation respects receiving account and reserved funds',async({page})=>{
+ await page.goto('http://127.0.0.1:8000/index.html');
+ const result=await page.evaluate(()=>{
+  const s=blank();s.accts=[{id:'salary',name:'給与',purpose:'給与受取',bal:30000},{id:'living',name:'生活',purpose:'生活費',bal:50000},{id:'goal',name:'旅行',purpose:'目的別貯金',bal:20000},{id:'emg',name:'緊急',emg:'1',bal:10000}];s.cfg.links={salary:'salary',living:'living'};s.moneyGoals=[{id:'g',acct:'goal',name:'旅行',target:30000}];s.inc=[{id:'i',date:today(),type:'給与',amt:100000,actual:true,acct:'salary'}];s.plans=[{id:'p',inc:'old',items:[{type:'rep',amt:10000,done:false}]}];load(JSON.stringify(s));const before=JSON.stringify(S);const context=allocationCashContext(100000,'i');const a=alloc(100000,'prio','i');return {available:context.available,cap:context.cap,planned:a.items.reduce((n,x)=>n+x.amt,0),unchanged:before===JSON.stringify(S)};
+ });
+ expect(result.available).toBe(70000);expect(result.cap).toBe(30000);expect(result.planned).toBeLessThanOrEqual(30000);expect(result.unchanged).toBe(true);
+});
