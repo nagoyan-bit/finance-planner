@@ -98,3 +98,21 @@ test('purpose savings stay protected from allocation and forecasts',async({page}
  const result=await page.evaluate(()=>{const before=S.accts.map(a=>a.bal),a=alloc(150000,'prio','test-income');return{cash:S.cash,emergency:S.emerg,protected:protectedGoalFunds(),usable:usableCash(),forecast:dailyForecast(0).end,simPool:sim('prio').pool,planned:a.items.reduce((n,x)=>n+x.amt,0),accountsBefore:before,accountsAfter:S.accts.map(x=>x.bal)}});
  expect(result.protected).toBe(50000);expect(result.cash).toBe(150000);expect(result.emergency).toBe(20000);expect(result.usable).toBe(100000);expect(result.forecast).toBe(100000);expect(result.simPool).toBe(100000);expect(result.planned).toBeLessThanOrEqual(100000);expect(result.accountsAfter).toEqual(result.accountsBefore);
 });
+
+
+test('v6.5.2 repeat entry fills but never registers',async({page})=>{
+ await page.goto('http://127.0.0.1:8000/index.html');
+ await page.evaluate(()=>{const s=blank();s.cash=50000;s.jobs=['店舗'];s.tx=[{id:'x',date:today(),amt:650,cat:'食費',pm:'cash',memo:'昼食'}];s.inc=[{id:'i',date:today(),amt:120000,gross:125000,type:'給与',job:'店舗',actual:true}];localStorage.setItem('dp',JSON.stringify(s))});
+ await page.reload();
+ await page.getByRole('navigation').getByRole('button',{name:'家計簿'}).click();
+ await page.locator('.entryquick').getByRole('button',{name:'昼食 650円',exact:true}).click();
+ await expect(page.locator('#ta')).toHaveValue('650');
+ await expect(page.locator('#tp')).toHaveValue('cash');
+ expect(await page.evaluate(()=>[S.cash,S.tx.length])).toEqual([50000,1]);
+ await page.getByRole('navigation').getByRole('button',{name:'収入配分'}).click();
+ await page.locator('.entryquick').getByRole('button',{name:'店舗 120,000円',exact:true}).click();
+ await expect(page.locator('#ia')).toHaveValue('120000');
+ await expect(page.locator('#igross')).toHaveValue('125000');
+ await expect(page.locator('#ij')).toHaveValue('店舗');
+ expect(await page.evaluate(()=>[S.cash,S.inc.length])).toEqual([50000,1]);
+});
