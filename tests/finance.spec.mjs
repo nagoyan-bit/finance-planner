@@ -143,3 +143,19 @@ test('v6.5.4 to v6.5.7 finance planning regression',async({page})=>{
  await page.locator('.entryamountbuttons').getByRole('button',{name:'金額クリア',exact:true}).click();
  await expect(page.locator('#ta')).toHaveValue('');
 });
+
+test('v6.5.8 mobile dashboard and entry-first layout',async({browser})=>{
+ const page=await browser.newPage({viewport:{width:390,height:844}});
+ await page.goto('http://127.0.0.1:8000/index.html');
+ await page.evaluate(()=>{const s=blank();s.cash=120000;s.bud.total=50000;s.inc=[{id:'i',date:today(),amt:120000,type:'給与',actual:true}];localStorage.setItem('dp',JSON.stringify(s))});
+ await page.reload();
+ await expect(page.locator('.homeactions .homeaction')).toHaveCount(4);
+ await expect(page.locator('nav svg')).toHaveCount(7);
+ await expect(page.locator('.homebudgetmeter')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+ await page.locator('.homeactions .homeaction').nth(1).click();
+ expect(await page.evaluate(()=>!!(document.querySelector('#incomeentry').compareDocumentPosition(document.querySelector('#income-recommendation'))&Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+ await expect(page.locator('.allocationvisual')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+ await page.close();
+});
