@@ -12,10 +12,10 @@ for (const viewport of [{width:1280,height:800},{width:390,height:844}]) {
   await page.reload();
   await page.getByRole('navigation').getByRole('button',{name:'家計簿'}).click();
   await page.locator('#ta').fill('1000');await page.locator('#tp').selectOption('cash');
-  await page.locator('.formmain').getByRole('button',{name:'登録',exact:true}).click();
+  await page.locator('.formmain').getByRole('button',{name:'支出を登録',exact:true}).click();
   expect(await page.evaluate(()=>({cash:S.cash,tx:S.tx.length}))).toEqual({cash:99000,tx:1});
   await page.getByRole('navigation').getByRole('button',{name:'収入配分'}).click();
-  await page.locator('#ia').fill('20000');await page.locator('.formmain').getByRole('button',{name:'登録',exact:true}).click();
+  await page.locator('#ia').fill('20000');await page.locator('.formmain').getByRole('button',{name:'入金を登録',exact:true}).click();
   expect(await page.evaluate(()=>({cash:S.cash,inc:S.inc.length}))).toEqual({cash:119000,inc:1});
   await page.getByRole('navigation').getByRole('button',{name:'借金'}).click();
   await page.locator('#ra').fill('3000');await page.locator('#ri').fill('100');await page.locator('.formmain').getByRole('button',{name:'実績登録',exact:true}).click();
@@ -29,13 +29,13 @@ for (const viewport of [{width:1280,height:800},{width:390,height:844}]) {
 }
 
 for(const viewport of [{width:1280,height:800},{width:390,height:844}]){
- test('v5.9 account and forecast regression '+viewport.width,async({browser})=>{
+ test('account and forecast regression '+viewport.width,async({browser})=>{
   const page=await browser.newPage({viewport});const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:8000/index.html');
   await page.evaluate(()=>{const s=blank();s.accts=[{id:'a',name:'給与',purpose:'給与受取',bal:70000},{id:'b',name:'返済',purpose:'返済',bal:30000},{id:'e',name:'貯金',emg:'1',bal:5000}];s.cash=100000;s.emerg=5000;s.debts=[{id:'d',name:'借入',bal:20000,bal0:20000,min:2000,rate:0,acct:'b'}];s.bud.total=20000;localStorage.setItem('dp',JSON.stringify(s))});
   await page.reload();
   await page.getByRole('navigation').getByRole('button',{name:'口座',exact:true}).click();
-  await page.locator('#xf').selectOption('a');await page.locator('#xt').selectOption('b');await page.locator('#xa').fill('10000');await page.getByRole('button',{name:'振替',exact:true}).click();
+  await page.locator('#xf').selectOption('a');await page.locator('#xt').selectOption('b');await page.locator('#xa').fill('10000');page.once('dialog',d=>d.accept());await page.locator('#transfercommit').click();
   expect(await page.evaluate(()=>[S.cash,S.emerg,S.accts[0].bal,S.accts[1].bal])).toEqual([100000,5000,60000,40000]);
   await page.getByRole('navigation').getByRole('button',{name:'借金'}).click();
   await page.locator('#ra').fill('3000');await page.locator('#ri').fill('100');await page.locator('.formmain').getByRole('button',{name:'実績登録',exact:true}).click();
@@ -70,6 +70,7 @@ test('shift templates preserve settings on mobile and old shift wage is a snapsh
  await page.goto('http://127.0.0.1:8000/index.html');
  await page.evaluate(()=>{S.shiftJobs=[{id:'job1',name:'テスト勤務先',mode:'hourly',rate:1200,transport:500,close:31,pay:25,offset:1,nightMultiplier:1.25}];save()});
  await page.reload();await page.getByRole('navigation').getByRole('button',{name:'収入配分'}).click();
+ await page.locator('#inc-shifts > summary').click();
  await page.locator('#shiftcalendar .calday').nth(0).click();
  await page.locator('#bsstart').fill('17:30');await page.locator('#bsend').fill('22:30');await page.locator('#bsrest').fill('30');
  const templateFold=()=>page.locator('#boardeditor details').filter({hasText:'勤務パターンを保存・呼び出し'});const openTemplates=async()=>{if(!await templateFold().evaluate(el=>el.open))await templateFold().locator('summary').click()};
