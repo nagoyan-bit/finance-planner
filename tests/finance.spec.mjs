@@ -124,3 +124,22 @@ test('v6.5.3 allocation respects receiving account and reserved funds',async({pa
  });
  expect(result.available).toBe(70000);expect(result.cap).toBe(30000);expect(result.planned).toBeLessThanOrEqual(30000);expect(result.unchanged).toBe(true);
 });
+
+test('v6.5.4 to v6.5.7 finance planning regression',async({page})=>{
+ await page.goto('http://127.0.0.1:8000/index.html');
+ const result=await page.evaluate(()=>{
+  const s=blank(),m=ym(today()),p=addM(m,-1),q=addM(m,-2);
+  s.bud.total=50000;s.tx=[{date:p+'-01',amt:38000,cat:'食費',pm:'cash'},{date:q+'-01',amt:42000,cat:'食費',pm:'cash'}];
+  load(JSON.stringify(s));const before=JSON.stringify(S);
+  const plan={items:[{type:'need',label:'生活費',amt:40000,done:true},{type:'rep',label:'返済',amt:30000,done:true},{type:'emg',label:'貯金',amt:20000,done:false}]};
+  const progress=allocationProgress(plan),budget=nextBudgetSuggestion(m);
+  return {reasons:allocationReasonRows(plan.items).length,done:progress.done,remaining:progress.remaining,budget:budget.suggested,duplicate:entryDuplicate('tx',p+'-01',38000,'食費','cash','','',''),unchanged:before===JSON.stringify(S)};
+ });
+ expect(result).toEqual({reasons:3,done:30000,remaining:20000,budget:40000,duplicate:true,unchanged:true});
+ await page.getByRole('navigation').getByRole('button',{name:'家計簿'}).click();
+ await page.locator('.entryamountbuttons').getByRole('button',{name:'＋500円',exact:true}).click();
+ await page.locator('.entryamountbuttons').getByRole('button',{name:'＋100円',exact:true}).click();
+ await expect(page.locator('#ta')).toHaveValue('600');
+ await page.locator('.entryamountbuttons').getByRole('button',{name:'金額クリア',exact:true}).click();
+ await expect(page.locator('#ta')).toHaveValue('');
+});
